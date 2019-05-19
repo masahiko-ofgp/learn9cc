@@ -24,9 +24,30 @@ char *user_input;
 // 100個以上のトークンは来ないものとする
 Token tokens[100];
 
+int pos = 0;
+
+// ASTのノードの型
+enum {
+    ND_NUM = 256,
+};
+
+typedef struct Node {
+    int ty;  // 演算子かND_NUM
+    struct Node *lhs;
+    struct Node *rhs;
+    int val;  // tyがND_NUMの場合のみ使用
+} Node;
+
 void error(char *fmt, ...);
 void error_at(char *loc, char *msg);
 void tokenize();
+Node *new_node(int ty, Node *lhs, Node *rhs);
+Node *new_node_num(int val);
+int consume(int ty);
+Node *expr();
+Node *mul();
+Node *term();
+void gen(Node *node);
 
 
 int main(int argc, char **argv) {
@@ -35,8 +56,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    user_input = argv[1];
-    tokenize();
+    tokenize(argv[1]);
+    Node *node = expr();
 
     printf(".intel_syntax noprefix\n");
     printf(".global main\n");
@@ -102,7 +123,7 @@ void tokenize() {
             continue;
         }
 
-        if (*p == '+' || *p == '-') {
+        if (*p == '+' || *p == '-' || *p == '*' || *p == '/') {
             tokens[i].ty = *p;
             tokens[i].input = p;
             i++;
@@ -123,4 +144,98 @@ void tokenize() {
 
         tokens[i].ty = TK_EOF;
         tokens[i].input = p;
+}
+
+Node *new_node(int ty, Node *lhs, Node *rhs) {
+    Node *node = malloc(sizeof(Node));
+    node->ty = ty;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return node;
+}
+
+Node *new_node_num(int val) {
+    Node *node = malloc(sizeof(Node));
+    node->ty = ND_NUM;
+    node->val = val;
+    return node;
+}
+
+int consume(int ty) {
+    if (tokens[pos].ty != ty)
+        return 0;
+    pos++;
+    return 1;
+}
+
+Node *expr() {
+    Node *node = mul();
+
+    for (;;) {
+        if (consume('+'))
+            node = new_node('+', node, mul());
+        else if (consume('-'))
+            node = new_node('-', node, mul());
+        else
+            return node;
+    }
+}
+
+Node *mul() {
+    Node *node = term();
+
+    for (;;) {
+        if (consume('*'))
+            node = new_node('*', node, term());
+        else if (consume('/'))
+            node = new_node('/', node, term());
+        else
+            return node;
+    }
+}
+
+Node *term() {
+    if (consume('(')) {
+        Node *node = expr();
+        if (!consume(')'))
+            error_at(tokens[pos].input,
+                    "Open paren has no corresponding closing paren.");
+        return node;
+    }
+
+    if (tokens[pos].ty == TK_NUM)
+        return new_node_num(tokens[pos++].val);
+
+    error_at(tokens[pos].input,
+            "Neither a number nor an open paren.");
+}
+
+void gen(Node *node) {
+    if (node->ty == ND_NUM) {
+        printf("  push %d\n", node->val);
+        return;
+    }
+
+    gen(node->lhs);
+    gen(node->rhs);
+
+    printf("  pop rdi\n");
+    printf("  pop rax\n");
+
+    switch (node->ty) {
+    case '+':
+        printf("  add rax, rdi\n");
+        break;
+    case '-':
+        printf("  sub rax, rdi\n");
+        break;
+    case '*':
+        printf("  imul rdi\n");
+        break;
+    case '/':
+        printf("  cqo\n");
+        printf("  idiv rdi\n");
+    }
+
+    printf("  push rax\n");
 }
