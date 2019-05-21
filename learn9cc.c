@@ -26,11 +26,16 @@ typedef struct {
 // 入力プログラム
 char *user_input;
 
-// トークナイズした結果のトークン列はこの配列に保存する
-// 100個以上のトークンは来ないものとする
 Token tokens[100];
 
 int pos = 0;
+
+// 可変長ベクタ
+typedef struct Vector {
+    void **data;
+    int len;
+    int capacity;
+} Vector;
 
 // ASTのノードの型
 enum {
@@ -64,12 +69,21 @@ Node *mul();
 Node *unary();
 Node *term();
 void gen(Node *node);
+Vector *new_vector();
+void vec_push(Vector *vec, void *elem);
+int expect(int line, int expected, int actual);
+void runtest();
 
 
 int main(int argc, char **argv) {
     if (argc != 2) {
         error("ERROR: The number of arguments is incorrect.");
         return 1;
+    }
+
+    if (strncmp(argv[1], "-test", 5) == 0) {
+        runtest();
+        return 0;
     }
 
     tokenize(argv[1]);
@@ -361,4 +375,44 @@ void gen(Node *node) {
     }
 
     printf("  push rax\n");
+}
+
+Vector *new_vector() {
+    Vector *vec = malloc(sizeof(Vector));
+    vec->data = malloc(sizeof(void *) * 16);
+    vec->capacity = 16;
+    vec->len = 0;
+    return vec;
+}
+
+void vec_push(Vector *vec, void *elem) {
+    if (vec->capacity == vec->len) {
+        vec->capacity *= 2;
+        // XXX: 異なるサイズの整数からポインタへのキャスト
+        vec->data = realloc(vec->data, sizeof(void *) * vec->capacity);
+    }
+    vec->data[vec->len++] = elem;
+}
+
+int expect(int line, int expected, int actual) {
+    if (expected == actual)
+        return 0;
+    fprintf(stderr, "%d: %d expected, but got %d\n",
+            line, expected, actual);
+    exit(1);
+}
+
+void runtest() {
+    Vector *vec = new_vector();
+    expect(__LINE__, 0, vec->len);
+
+    for (int i = 0; i < 100; i++)
+        vec_push(vec, (void *)i);
+
+    expect(__LINE__, 100, vec->len);
+    expect(__LINE__, 0, (long)vec->data[0]);
+    expect(__LINE__, 50, (long)vec->data[50]);
+    expect(__LINE__, 99, (long)vec->data[99]);
+
+    printf("OK\n");
 }
