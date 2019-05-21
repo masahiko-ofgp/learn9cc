@@ -7,7 +7,13 @@
 // トークンの型を表す値
 enum {
     TK_NUM = 256, // 整数トークン
-    TK_EOF        // 入力の終わりを表すトークン
+    TK_EOF,        // 入力の終わりを表すトークン
+    TK_EQ,
+    TK_NE,
+    TK_LT,
+    TK_GT,
+    TK_LE,
+    TK_GE,
 };
 
 // トークンの型
@@ -29,6 +35,12 @@ int pos = 0;
 // ASTのノードの型
 enum {
     ND_NUM = 256,
+    ND_EQ,
+    ND_NE,
+    ND_LT,
+    ND_GT,
+    ND_LE,
+    ND_GE,
 };
 
 typedef struct Node {
@@ -45,6 +57,9 @@ Node *new_node(int ty, Node *lhs, Node *rhs);
 Node *new_node_num(int val);
 int consume(int ty);
 Node *expr();
+Node *equality();
+Node *relational();
+Node *add();
 Node *mul();
 Node *unary();
 Node *term();
@@ -96,6 +111,58 @@ void tokenize(char *p) {
     int i = 0;
     while (*p) {
         if (isspace(*p)) {
+            p++;
+            continue;
+        }
+
+        if (strncmp(p, "==", 2) == 0) {
+            tokens[i].ty = TK_EQ;
+            tokens[i].input = p;
+            i++;
+            p++;
+            p++;
+            continue;
+        }
+
+        if (strncmp(p, "!=", 2) == 0) {
+            tokens[i].ty = TK_NE;
+            tokens[i].input = p;
+            i++;
+            p++;
+            p++;
+            continue;
+        }
+
+        if (strncmp(p, "<=", 2) == 0) {
+            tokens[i].ty = TK_LE;
+            tokens[i].input = p;
+            i++;
+            p++;
+            p++;
+            continue;
+        }
+
+        if (strncmp(p, ">=", 2) == 0) {
+            tokens[i].ty = TK_GE;
+            tokens[i].input = p;
+            i++;
+            p++;
+            p++;
+            continue;
+        }
+
+        if (*p == '<') {
+            tokens[i].ty = TK_LT;
+            tokens[i].input = p;
+            i++;
+            p++;
+            continue;
+        }
+
+        if (*p == '>') {
+            tokens[i].ty = TK_GT;
+            tokens[i].input = p;
+            i++;
             p++;
             continue;
         }
@@ -154,6 +221,40 @@ int consume(int ty) {
 }
 
 Node *expr() {
+    return equality();
+}
+
+Node *equality() {
+    Node *node = relational();
+
+    for (;;) {
+        if (consume(TK_EQ))
+            node = new_node(ND_EQ, node, relational());
+        else if (consume(TK_NE))
+            node = new_node(ND_NE, node, relational());
+        else
+            return node;
+    }
+}
+
+Node *relational() {
+    Node *node = add();
+
+    for (;;) {
+        if (consume(TK_LT))
+            node = new_node(ND_LT, node, add());
+        else if (consume(TK_LE))
+            node = new_node(ND_LE, node, add());
+        else if (consume(TK_GT))
+            node = new_node(ND_GT, node, add());
+        else if (consume(TK_GE))
+            node = new_node(ND_GE, node, add());
+        else
+            return node;
+    }
+}
+
+Node *add() {
     Node *node = mul();
 
     for (;;) {
@@ -216,6 +317,35 @@ void gen(Node *node) {
     printf("  pop rax\n");
 
     switch (node->ty) {
+    case ND_EQ:
+        printf("  cmp rax, rdi\n");
+        printf("  sete al\n");
+        printf("  movzb rax, al\n");
+    case ND_NE:
+        printf("  cmp rax, rdi\n");
+        printf("  setne al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LT:
+        printf("  cmp rax, rdi\n");
+        printf("  setl al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_GT:
+        printf("  cmp rdi, rax\n");
+        printf("  setl al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_LE:
+        printf("  cmp rax, rdi\n");
+        printf("  setle al\n");
+        printf("  movzb rax, al\n");
+        break;
+    case ND_GE:
+        printf("  cmp rdi, rax\n");
+        printf("  setle al\n");
+        printf("  movzb rax, al\n");
+        break;
     case '+':
         printf("  add rax, rdi\n");
         break;
