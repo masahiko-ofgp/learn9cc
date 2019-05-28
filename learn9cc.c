@@ -3,106 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "learn9cc.h"
 
-/* Token Type */
-enum {
-    TK_NUM = 256,
-    TK_EOF,
-    TK_EQ,
-    TK_NE,
-    TK_LT,
-    TK_GT,
-    TK_LE,
-    TK_GE,
-};
+extern int pos;
+extern char *user_input;
+extern Vector *tokens;
 
-typedef struct Token {
-    int ty;
-    int val;  /* "ty=TK_NUM" only */
-    char *input; /* If error, this value is used. */
-} Token;
-
-typedef struct Vector {
-    void **data;
-    int len;
-    int capacity;
-} Vector;
-
-/* NODE TYPE */
-enum {
-    ND_NUM = 256,
-    ND_EQ,
-    ND_NE,
-    ND_LT,
-    ND_GT,
-    ND_LE,
-    ND_GE,
-};
-
-typedef struct Node {
-    int ty;
-    struct Node *lhs;
-    struct Node *rhs;
-    int val;  /* "ty=ND_NUM" only */
-} Node;
-
-
-/****** PROTO TYPE ******/
-void error(char *fmt, ...);
-void error_at(char *loc, char *msg);
-Node *new_node(int ty, Node *lhs, Node *rhs);
-Node *new_node_num(int val);
-int consume(int ty);
-Node *expr();
-Node *equality();
-Node *relational();
-Node *add();
-Node *mul();
-Node *unary();
-Node *term();
-void gen(Node *node);
-Vector *new_vector();
-void vec_push(Vector *vec, void *elem);
-int expect(int line, int expected, int actual);
-void runtest();
-Vector *tokenize(char *p);
-Token *add_token(Vector *v, int ty, char *input);
-
-
-/****** GLOBAL VARIABLES ******/
-int pos;
-char *user_input;
-Vector *tokens;
-
-
-/****** MAIN ******/
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        error("ERROR: The number of arguments is incorrect.");
-        return 1;
-    }
-
-    if (strncmp(argv[1], "-test", 5) == 0) {
-        runtest();
-        return 0;
-    }
-
-    pos = 0;
-    user_input = argv[1];
-    tokens = (Vector *)tokenize(user_input);
-    Node *node = expr();
-
-    printf(".intel_syntax noprefix\n");
-    printf(".global main\n");
-    printf("main:\n");
-
-    gen(node);
-
-    printf("  pop rax\n");
-    printf("  ret\n");
-
-    return 0;
-}
 
 /* Reporting Error */
 void error(char *fmt, ...) {
