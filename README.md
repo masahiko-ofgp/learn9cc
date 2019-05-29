@@ -9,4 +9,5 @@
 - [x] 単項プラスと単項マイナス
 - [x] 比較演算子
 - [x] 可変長ベクタ
-- [x] ファイル分割　その１（main.cとlearn9cc.hとlearn9cc.cに分割）
+- [x] ファイル分割 １ main.cとlearn9cc.hとlearn9cc.cに分割
+- [x] ファイル分割 ２ learn9cc.cをparse.cとcodegen.cとcontainer.cに分割
