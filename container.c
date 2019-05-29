@@ -26,7 +26,7 @@ void runtest() {
     expect(__LINE__, 0, vec->len);
 
     for (int i = 0; i < 100; i++)
-        // todo: Cast from different size int to a pointer.
+        // TODO: -Wint-to-pointer-cast
         vec_push(vec, (void *)i);
 
     expect(__LINE__, 100, vec->len);

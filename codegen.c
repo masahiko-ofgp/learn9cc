@@ -108,6 +108,7 @@ Node *term() {
     if (((Token *)tokens->data[pos])->ty == TK_NUM)
         return new_node_num(((Token *)tokens->data[pos++])->val);
 
+    // TODO: -Wreturn-type
     error_at(((Token *)tokens->data[pos])->input,
             "Neither a number nor an open paren.");
 }
@@ -166,6 +167,9 @@ void gen(Node *node) {
     case '/':
         printf("  cqo\n");
         printf("  idiv rdi\n");
+        break;
+    default:
+        break;
     }
 
     printf("  push rax\n");
