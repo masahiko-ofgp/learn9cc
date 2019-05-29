@@ -11,3 +11,4 @@
 - [x] 可変長ベクタ
 - [x] ファイル分割 １ main.cとlearn9cc.hとlearn9cc.cに分割
 - [x] ファイル分割 ２ learn9cc.cをparse.cとcodegen.cとcontainer.cに分割
+- [ ] Makefileの変更および警告部分の修正
